@@ -1,21 +1,15 @@
-﻿using OpenTK.Graphics.OpenGL;
+using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using System;
-using System.Buffers;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Security.Policy;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.Formats.Asn1.AsnWriter;
 
 
 namespace MidiPlayer
@@ -24,7 +18,7 @@ namespace MidiPlayer
     {
         public ulong Delta { get; set; }
         public uint Data { get; set; }
-        public int OriginalIndex { get; set; } // 安定ソート用
+        public int OriginalIndex { get; set; }
     }
 
     public class PackedTempo
@@ -44,8 +38,8 @@ namespace MidiPlayer
 
             // Radix Sort
             var sorted = indexedItems.RadixSort(
-                x => keySelector(x.Item),  
-                x => x.Index              
+                x => keySelector(x.Item),
+                x => x.Index
             ).ToList();
 
             for (int i = 0; i < list.Count; i++)
@@ -238,7 +232,8 @@ namespace MidiPlayer
     {
         private const int WindowWidth = 512;
         private const int WindowHeight = 288;
-        private const double PPQNBuffer = 196.0;
+        private const double PPQNBuffer = 240.0;
+        private const double noteSpeed = 1.0;
 
         private List<PackedEvent> allEvents = new List<PackedEvent>();
         private List<PackedTempo> tempoChanges = new List<PackedTempo>();
@@ -254,7 +249,6 @@ namespace MidiPlayer
         private int eventIndex = 0;
         private DateTime lastTime;
         private double holdTime = 0;
-        private double noteSpeed = 1.0;
         private Dictionary<byte, bool> noteStates = new Dictionary<byte, bool>();
         private int lastEventIndex = 0;
         private double fps = 0;
@@ -321,7 +315,7 @@ namespace MidiPlayer
                 TexCoord = aTexCoord;
             }";
 
-                private string fragmentShaderSource = @"
+        private string fragmentShaderSource = @"
             #version 330 core
             in vec2 TexCoord;
             out vec4 FragColor;
@@ -778,7 +772,6 @@ namespace MidiPlayer
             int bufferSize = WindowHeight * WindowWidth * 3;
             frontBuffer = new byte[bufferSize];
             backBuffer = new byte[bufferSize];
-            noteSpeed = 1.0;
             bufferDirty = true;
 
             // Set callbacks
@@ -1148,7 +1141,7 @@ namespace MidiPlayer
                 double yPos = 250.0;
                 int x = columnIndex * 4 + 2;
 
-                for (int a = 0; a < (int)(230 / noteSpeed); a++)
+                for (int a = 0; a < (int)(240 / noteSpeed); a++)
                 {
                     if (currentPos >= visualMemory.Length)
                     {
@@ -1424,4 +1417,3 @@ namespace MidiPlayer
         }
     }
 }
-
