@@ -443,16 +443,16 @@ namespace MidiPlayer
             sbyte[] visualMemory = new sbyte[visualSize];
 
             int noteSize = 500_000_000;
-            byte[] noteMemory = new byte[noteSize * 3]; // 3バイト方式
-            ulong[] noteDelta = new ulong[noteSize];
+            var noteData = new List<uint>(noteSize);
+            var noteDelta = new List<ulong>(noteSize);
 
             int eventSize = 10_000_000;
-            uint[] eventMemory = new uint[eventSize];
-            ulong[] eventDelta = new ulong[eventSize];
+            var eventData = new List<uint>(eventSize);
+            var eventDelta = new List<ulong>(eventSize);
 
             List<double[]> strangeTempo = new List<double[]>(1000);
 
-            int noteCount = 0, eventCount = 0, tempoCount = 0;
+            int tempoCount = 0;
             ulong maxDelta = 0;
 
             uint[] putKey = new uint[128 * 16];
@@ -466,28 +466,6 @@ namespace MidiPlayer
             accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref basePtr);
 
             byte* ptr = basePtr + startPos;
-
-            void SetNote24(int index, uint value)
-            {
-                fixed (byte* basePtr = noteMemory)
-                {
-                    byte* p = basePtr + index * 3;
-                    p[0] = (byte)(value & 0xFF);
-                    p[1] = (byte)((value >> 8) & 0xFF);
-                    p[2] = (byte)((value >> 16) & 0xFF);
-                }
-            }
-
-            uint GetNote24(int index)
-            {
-                fixed (byte* basePtr = noteMemory)
-                {
-                    byte* p = basePtr + index * 3;
-                    return (uint)(p[0] | (p[1] << 8) | (p[2] << 16));
-                }
-            }
-
-
             try
             {
                 for (int trackNum = 0; trackNum < numTracks; trackNum++)
@@ -505,22 +483,9 @@ namespace MidiPlayer
 
                     while (ptr < trackEnd)
                     {
-                        if (tempoCount >= strangeTempo.Count)
+                        if (strangeTempo.Count <= tempoCount)
                             strangeTempo.Add(new double[2]);
 
-                        if (noteCount >= noteMemory.Length / 3)
-                        {
-                            int newSize = (noteMemory.Length / 3) * 2;
-                            Array.Resize(ref noteMemory, newSize * 3);
-                            Array.Resize(ref noteDelta, newSize);
-                        }
-
-                        if (eventCount >= eventMemory.Length)
-                        {
-                            int newSize = eventMemory.Length * 2;
-                            Array.Resize(ref eventMemory, newSize);
-                            Array.Resize(ref eventDelta, newSize);
-                        }
 
                         ulong deltaInc = ReadVariableLengthUnsafe(ref ptr);
                         delta += deltaInc;
@@ -573,9 +538,8 @@ namespace MidiPlayer
                             if (putKey[vCount] > 0)
                             {
                                 putKey[vCount]--;
-                                SetNote24(noteCount, (0u << 16) | ((uint)note << 8) | statusByte);
-                                noteDelta[noteCount] = delta;
-                                noteCount++;
+                                noteData.Add((0u << 16) | ((uint)note << 8) | statusByte);
+                                noteDelta.Add(delta);
                             }
 
                             if (vDelta[vCount] > delta || check[vCount] == 0)
@@ -638,9 +602,8 @@ namespace MidiPlayer
                                 {
                                     putKey[vCount]++;
                                     putDelta[vCount] = (uint)delta;
-                                    SetNote24(noteCount, ((uint)velocity << 16) | ((uint)note << 8) | statusByte);
-                                    noteDelta[noteCount] = delta;
-                                    noteCount++;
+                                    noteData.Add(((uint)velocity << 16) | ((uint)note << 8) | statusByte);
+                                    noteDelta.Add(delta);
                                 }
                             }
                             ptr += 2;
@@ -655,9 +618,8 @@ namespace MidiPlayer
                             else
                                 eventValue = ((uint)(ptr[1]) << 16) | ((uint)(*ptr) << 8) | statusByte;
 
-                            eventMemory[eventCount] = eventValue;
-                            eventDelta[eventCount] = delta;
-                            eventCount++;
+                            eventData.Add(eventValue);
+                            eventDelta.Add(delta);
                             ptr += eventLength;
                         }
                     }
@@ -666,11 +628,12 @@ namespace MidiPlayer
                         maxDelta = delta;
                 }
 
-                var events = new List<PackedEvent>(eventCount + noteCount);
-                for (int i = 0; i < eventCount; i++)
-                    events.Add(new PackedEvent { Delta = eventDelta[i], Data = eventMemory[i], OriginalIndex = i });
-                for (int i = 0; i < noteCount; i++)
-                    events.Add(new PackedEvent { Delta = noteDelta[i], Data = GetNote24(i), OriginalIndex = eventCount + i });
+                var events = new List<PackedEvent>(eventData.Count + noteData.Count);
+                for (int i = 0; i < eventData.Count; i++)
+                    events.Add(new PackedEvent { Delta = eventDelta[i], Data = eventData[i], OriginalIndex = i });
+                for (int i = 0; i < noteData.Count; i++)
+                    events.Add(new PackedEvent { Delta = noteDelta[i], Data = noteData[i], OriginalIndex = eventData.Count + i });
+
                 events.StableSort(x => x.Delta);
 
                 var tempos = new List<PackedTempo>(tempoCount);
