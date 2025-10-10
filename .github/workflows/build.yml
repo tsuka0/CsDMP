@@ -1,4 +1,3 @@
-
 name: make release
 
 on:
@@ -22,12 +21,11 @@ jobs:
       - name: 依存関係の復元
         run: dotnet restore CsDMP.sln
 
-      # 4. プロジェクトをビルド
       - name: ビルド
-        run: dotnet build CsDMP.sln --configuration Release --no-restore
+        run: dotnet build CsDMP.sln --configuration Release --no-restore -o ./publish_dir
       
       - name: ziping
-        run: Compress-Archive -Path CsDMP/bin/x64/Release/net6.0-windows7.0/* -DestinationPath CsDMP-${{ github.ref_name }}.zip
+        run: Compress-Archive -Path ./publish_dir/* -DestinationPath CsDMP-${{ github.ref_name }}.zip
 
       - name: りりーす
         uses: softprops/action-gh-release@v2
