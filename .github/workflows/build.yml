@@ -1,0 +1,36 @@
+
+name: make release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+
+      - name: .NETセットアップ
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.x'
+
+      - name: 依存関係の復元
+        run: dotnet restore CsDMP.sln
+
+      # 4. プロジェクトをビルド
+      - name: ビルド
+        run: dotnet build CsDMP.sln --configuration Release --no-restore
+      
+      - name: ziping
+        run: Compress-Archive -Path CsDMP/bin/x64/Release/net6.0-windows7.0/* -DestinationPath CsDMP-${{ github.ref_name }}.zip
+
+      - name: りりーす
+        uses: softprops/action-gh-release@v2
+        with:
+          files: CsDMP-${{ github.ref_name }}.zip
+          name: Release ${{ github.ref_name }}
