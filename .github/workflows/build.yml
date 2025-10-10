@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build-and-release:
     runs-on: windows-latest
@@ -20,7 +23,7 @@ jobs:
 
       - name: 依存関係の復元
         run: dotnet restore CsDMP.sln
-
+        
       - name: ビルド
         run: dotnet build CsDMP.sln --configuration Release --no-restore -o ./publish_dir
       
