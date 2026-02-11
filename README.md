@@ -1,6 +1,6 @@
 # C# Dot MIDI Player
 
-[⚠First,Please install .NET 6.0 runtime](https://dotnet.microsoft.com/ja-jp/download/dotnet/thank-you/runtime-desktop-6.0.36-windows-x64-installer?cid=getdotnetcore)
+[⚠First,Please install .NET 8.0 runtime](https://dotnet.microsoft.com/ja-jp/download/dotnet/8.0)
 
 Japanese:
 このMIDIプレイヤーは、レンダリングを画像のようなデータにしておくことで
